@@ -3,27 +3,18 @@ version: "3.8"
 services:
   postgres-db:
     image: postgres:15.5-alpine
-    container_name: postgres-db
     restart: always
-    ports:
-      - "5432:5432"
     environment:
       POSTGRES_DB: healenium
       POSTGRES_USER: healenium_user
       POSTGRES_PASSWORD: YDk2nmNs4s9aCP6K
-    # Railway automatically handles volumes for databases
-    # For local testing, uncomment:
-    # volumes:
-    #   - ./db/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    # Railway automatically provisions volumes for databases
 
   healenium:
     image: healenium/hlm-backend:3.4.8
-    container_name: healenium
     restart: on-failure
     ports:
       - "7878:7878"
-    depends_on:
-      - postgres-db
     environment:
       SPRING_POSTGRES_DB: healenium
       SPRING_POSTGRES_SCHEMA: healenium
@@ -34,21 +25,17 @@ services:
       COLLECT_METRICS: "true"
       FIND_ELEMENTS_AUTO_HEALING: "false"
       HLM_LOG_LEVEL: "info"
-    # Railway uses ephemeral storage; for production, use external storage:
-    # volumes:
-    #   - ./screenshots:/screenshots
-    #   - ./logs:/logs
+    depends_on:
+      - postgres-db
 
   selector-imitator:
     image: healenium/hlm-selector-imitator:1.6
-    container_name: selector-imitator
     restart: on-failure
     ports:
       - "8000:8000"
 
   hlm-proxy:
     image: healenium/hlm-proxy:2.1.6
-    container_name: hlm-proxy
     restart: on-failure
     ports:
       - "8085:8085"
@@ -58,11 +45,8 @@ services:
       HEAL_ENABLED: "true"
       SELENIUM_SERVER_URL: "http://selenium-hub:4444/wd/hub"
       HEALENIUM_SERVER_URL: "http://healenium:7878"
-      HEALENIUM_SERVICE: "http://healenium:7878"
       IMITATE_SERVICE: "http://selector-imitator:8000"
       HLM_LOG_LEVEL: "info"
-    # volumes:
-    #   - ./logs:/logs
     depends_on:
       - healenium
       - selector-imitator
@@ -70,53 +54,28 @@ services:
 
   selenium-hub:
     image: selenium/hub:latest
-    container_name: selenium-hub
     restart: on-failure
     ports:
-      - "4442:4442"
-      - "4443:4443"
       - "4444:4444"
 
   chrome:
     image: selenium/node-chrome:latest
-    container_name: node-chrome
     restart: on-failure
     shm_size: "2gb"
-    depends_on:
-      - selenium-hub
     environment:
       SE_EVENT_BUS_HOST: selenium-hub
       SE_EVENT_BUS_PUBLISH_PORT: "4442"
       SE_EVENT_BUS_SUBSCRIBE_PORT: "4443"
-      SE_NODE_MAX_INSTANCES: "5"
-      SE_NODE_MAX_SESSIONS: "5"
-      SE_NODE_SESSION_TIMEOUT: "20"
-
-  edge:
-    image: selenium/node-edge:latest
-    container_name: node-edge
-    shm_size: "2gb"
     depends_on:
       - selenium-hub
-    environment:
-      SE_EVENT_BUS_HOST: selenium-hub
-      SE_EVENT_BUS_PUBLISH_PORT: "4442"
-      SE_EVENT_BUS_SUBSCRIBE_PORT: "4443"
 
   firefox:
     image: selenium/node-firefox:latest
-    container_name: node-firefox
     restart: on-failure
     shm_size: "2gb"
-    depends_on:
-      - selenium-hub
     environment:
       SE_EVENT_BUS_HOST: selenium-hub
       SE_EVENT_BUS_PUBLISH_PORT: "4442"
       SE_EVENT_BUS_SUBSCRIBE_PORT: "4443"
-
-# Railway automatically creates a shared network
-# For local testing, uncomment:
-# networks:
-#   healenium:
-#     name: healenium
+    depends_on:
+      - selenium-hub
