@@ -3,79 +3,33 @@ version: "3.8"
 services:
   postgres-db:
     image: postgres:15.5-alpine
-    restart: always
     environment:
       POSTGRES_DB: healenium
       POSTGRES_USER: healenium_user
       POSTGRES_PASSWORD: YDk2nmNs4s9aCP6K
-    # Railway automatically provisions volumes for databases
+    # Railway handles volumes automatically
 
   healenium:
     image: healenium/hlm-backend:3.4.8
-    restart: on-failure
     ports:
       - "7878:7878"
     environment:
+      SPRING_POSTGRES_DB_HOST: postgres-db
       SPRING_POSTGRES_DB: healenium
-      SPRING_POSTGRES_SCHEMA: healenium
       SPRING_POSTGRES_USER: healenium_user
       SPRING_POSTGRES_PASSWORD: YDk2nmNs4s9aCP6K
-      SPRING_POSTGRES_DB_HOST: postgres-db
-      KEY_SELECTOR_URL: "false"
-      COLLECT_METRICS: "true"
-      FIND_ELEMENTS_AUTO_HEALING: "false"
-      HLM_LOG_LEVEL: "info"
     depends_on:
       - postgres-db
 
-  selector-imitator:
-    image: healenium/hlm-selector-imitator:1.6
-    restart: on-failure
-    ports:
-      - "8000:8000"
-
-  hlm-proxy:
-    image: healenium/hlm-proxy:2.1.6
-    restart: on-failure
-    ports:
-      - "8085:8085"
-    environment:
-      RECOVERY_TRIES: "1"
-      SCORE_CAP: ".6"
-      HEAL_ENABLED: "true"
-      SELENIUM_SERVER_URL: "http://selenium-hub:4444/wd/hub"
-      HEALENIUM_SERVER_URL: "http://healenium:7878"
-      IMITATE_SERVICE: "http://selector-imitator:8000"
-      HLM_LOG_LEVEL: "info"
-    depends_on:
-      - healenium
-      - selector-imitator
-      - selenium-hub
-
   selenium-hub:
     image: selenium/hub:latest
-    restart: on-failure
     ports:
       - "4444:4444"
 
   chrome:
     image: selenium/node-chrome:latest
-    restart: on-failure
     shm_size: "2gb"
     environment:
       SE_EVENT_BUS_HOST: selenium-hub
-      SE_EVENT_BUS_PUBLISH_PORT: "4442"
-      SE_EVENT_BUS_SUBSCRIBE_PORT: "4443"
-    depends_on:
-      - selenium-hub
-
-  firefox:
-    image: selenium/node-firefox:latest
-    restart: on-failure
-    shm_size: "2gb"
-    environment:
-      SE_EVENT_BUS_HOST: selenium-hub
-      SE_EVENT_BUS_PUBLISH_PORT: "4442"
-      SE_EVENT_BUS_SUBSCRIBE_PORT: "4443"
     depends_on:
       - selenium-hub
